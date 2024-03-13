@@ -1,4 +1,7 @@
-"""Define the NonlinearBlockGS class."""
+"""Define the NonlinearBlockGS class.
+
+This class was derived from OpenMDAO 3.30 NonlinearBlockGS code 
+"""
 
 import os
 import numpy as np
@@ -38,7 +41,7 @@ class RecklessNonlinearBlockGS(NonlinearBlockGS):
         **kwargs : dict
             options dictionary.
         """
-        super(RecklessNonlinearBlockGS, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         self._convrg_vars = None
         self._convrg_rtols = None
@@ -47,7 +50,7 @@ class RecklessNonlinearBlockGS(NonlinearBlockGS):
         """
         Declare options before kwargs are processed in the init method.
         """
-        super(RecklessNonlinearBlockGS, self)._declare_options()
+        super()._declare_options()
         self.options.declare(
             "convrg_vars",
             types=list,
@@ -192,7 +195,7 @@ class RecklessNonlinearBlockGS(NonlinearBlockGS):
                     )
                 )
 
-        return super(RecklessNonlinearBlockGS, self)._iter_initialize()
+        return super()._iter_initialize()
 
     def _is_rtol_converged(self, ratio):
         """
