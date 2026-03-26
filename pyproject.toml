@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openmdao_extensions"
-version = "1.4.0"
+version = "1.5.0"
 description = "Additional solvers and drivers for OpenMDAO framework"
 readme = "README.md"
 license = "Apache-2.0"
@@ -26,7 +26,7 @@ classifiers = [
 dependencies = ["openmdao>=3.0.0"]
 
 [project.optional-dependencies]
-egobox = ["egobox>=0.32.0"]
+egobox = ["egobox>=0.36.0"]
 
 [project.urls]
 Homepage = "https://github.com/OneraHub/openmdao_extensions"

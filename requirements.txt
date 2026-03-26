@@ -1,4 +1,4 @@
 smt
 salib
 openturns
-egobox
+egobox>=0.36.0

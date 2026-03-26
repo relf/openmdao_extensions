@@ -7,7 +7,7 @@ from openmdao.core.analysis_error import AnalysisError
 EGOBOX_NOT_INSTALLED = False
 try:
     import egobox as egx
-    from egobox import Egor, GpConfig
+    from egobox import Egor, GpConfig, TregoConfig, QEiConfig
 except ImportError:
     EGOBOX_NOT_INSTALLED = True
 
@@ -92,15 +92,31 @@ class EgoboxEgorDriver(Driver):
         }
         n_iter = self.opt_settings["maxiter"]
 
-        # Manage gp_config special case: conf object GpConfig
-        gp_config_args = self.opt_settings.get("gp_config", {})
+        # Filter out options requiring an object and ignore run options
         optim_settings.update(
             {
                 k: v
                 for k, v in self.opt_settings.items()
-                if k != "maxiter" and k != "gp_config"
+                if k
+                not in [
+                    "gp_config",
+                    "trego",
+                    "qei_config",
+                    "maxiter",
+                    "run_info",
+                    "fcstrs",
+                ]
             }
         )
+
+        # Manage gp_config special case: conf object GpConfig
+        gp_config_args = self.opt_settings.get("gp_config", {})
+
+        # Manage trego_config special case: conf object TregoConfig
+        trego_config_args = self.opt_settings.get("trego", {})
+
+        # Manage qei_config special case: conf object QeiConfig
+        qei_config_args = self.opt_settings.get("qei_config", {})
 
         dim = 0
         for name, meta in self._designvars.items():
@@ -108,12 +124,12 @@ class EgoboxEgorDriver(Driver):
         if dim > 10:
             self.optim_settings["kpls_dim"] = 3
 
-        gp_config = GpConfig(**gp_config_args)
-
         # Instanciate a SEGO optimizer
         egor = Egor(
             xspecs=self.xspecs,
-            gp_config=gp_config,
+            gp_config=GpConfig(**gp_config_args),
+            qei_config=QEiConfig(**qei_config_args),
+            trego=TregoConfig(**trego_config_args),
             n_cstr=self.n_cstr,
             **optim_settings,
         )
@@ -247,7 +263,7 @@ class EgoboxEgorDriver(Driver):
 
                 # Get the objective function evaluation - single obj support
                 for obj in self.get_objective_values().values():
-                    res[k, 0] = obj
+                    res[k, 0] = obj.item()
 
                 # Get the constraint evaluations
                 j = 1
