@@ -23,10 +23,10 @@ classifiers = [
     "Operating System :: Unix",
     "Operating System :: MacOS",
 ]
-dependencies = ["openmdao>=3.0.0"]
+dependencies = ["openmdao>=3.0.0", "packaging"]
 
 [project.optional-dependencies]
-egobox = ["egobox>=0.36.0"]
+egobox = ["egobox>=0.37"]
 
 [project.urls]
 Homepage = "https://github.com/OneraHub/openmdao_extensions"

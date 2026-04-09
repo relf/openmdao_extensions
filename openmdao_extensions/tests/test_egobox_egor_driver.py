@@ -25,6 +25,10 @@ class TestEgor(unittest.TestCase):
         pb.model.add_constraint("con2", upper=0)
         pb.driver = EgoboxEgorDriver(optimizer="EGOR")
         pb.driver.opt_settings["maxiter"] = 10
+        pb.driver.opt_settings["verbose"] = 2
+        pb.driver.opt_settings["seed"] = 42
+        pb.driver.opt_settings["timeout"] = 0.200
+        pb.driver.opt_settings["outdir"] = "./test_sellar_out"
         pb.setup()
         self.case_recorder_filename = "{}/test_egobox_driver_sellar.sqlite".format(
             pb.get_outputs_dir()

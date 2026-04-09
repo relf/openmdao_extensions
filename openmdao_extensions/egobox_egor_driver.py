@@ -1,15 +1,21 @@
 import numpy as np
 import traceback
+import importlib.metadata
 
 from openmdao.core.driver import Driver, RecordingDebugging
 from openmdao.core.analysis_error import AnalysisError
+from packaging.version import Version
 
+EGOBOX_VERSION = None
 EGOBOX_NOT_INSTALLED = False
 try:
     import egobox as egx
     from egobox import Egor, GpConfig, TregoConfig, QEiConfig
+
+    EGOBOX_VERSION = Version(importlib.metadata.version("egobox"))
 except ImportError:
     EGOBOX_NOT_INSTALLED = True
+    EGOBOX_VERSION = None
 
 
 def to_list(lst, size):
@@ -31,7 +37,7 @@ class EgoboxEgorDriver(Driver):
         """Initialize the driver with the given options."""
         super(EgoboxEgorDriver, self).__init__(**kwargs)
 
-        if EGOBOX_NOT_INSTALLED:
+        if EGOBOX_VERSION is None:
             raise RuntimeError("egobox library is not installed.")
 
         # What we support
@@ -105,6 +111,12 @@ class EgoboxEgorDriver(Driver):
                     "maxiter",
                     "run_info",
                     "fcstrs",
+                    "outdir",
+                    "seed",
+                    "hot_start",
+                    "timeout",
+                    "verbose",
+                    "warm_start",
                 ]
             }
         )
@@ -134,14 +146,31 @@ class EgoboxEgorDriver(Driver):
             **optim_settings,
         )
 
+        runargs = {
+            "run_info": self.opt_settings.get("run_info", egx.RunInfo()),
+            "seed": self.opt_settings.get("seed", None),
+            "outdir": self.opt_settings.get("outdir", None),
+            "hot_start": self.opt_settings.get("hot_start", False),
+            "warm_start": self.opt_settings.get("warm_start", False),
+            "verbose": self.opt_settings.get("verbose", False),
+        }
+
+        # Timeout is introduced after 0.37.1
+        if (
+            self.opt_settings.get("timeout", None) is not None
+            and EGOBOX_VERSION
+            and EGOBOX_VERSION > Version("0.37.1")
+        ):
+            runargs["timeout"] = self.opt_settings["timeout"]
+
         # Run the optim
-        res = egor.minimize(self._objfunc, max_iters=n_iter)
+        optim = egor.minimize(self._objfunc, max_iters=n_iter, **runargs)
 
         # Set optimal parameters
         i = 0
         for name, meta in self._designvars.items():
             size = meta["size"]
-            self.set_design_var(name, res.x_opt[i : i + size])
+            self.set_design_var(name, optim.result.x_opt[i : i + size])
             i += size
 
         with RecordingDebugging(self.name, self.iter_count, self) as rec:
