@@ -45,10 +45,10 @@ class EgoboxEgorDriver(Driver):
         self.supports["inequality_constraints"] = True
         self.supports["linear_constraints"] = True
         self.supports["integer_design_vars"] = True
+        self.supports["equality_constraints"] = True
+        self.supports["two_sided_constraints"] = True
 
         # What we don't support
-        self.supports["equality_constraints"] = False
-        self.supports["two_sided_constraints"] = False
         self.supports["multiple_objectives"] = False
         self.supports["active_set"] = False
         self.supports["simultaneous_derivatives"] = False
@@ -89,13 +89,10 @@ class EgoboxEgorDriver(Driver):
         self.xspecs = self._initialize_vars(model)
 
         # Format constraints to suit segomoe implementation
-        self.n_cstr = self._initialize_cons()
+        self.cstr_specs = self._initialize_cons()
 
         # Format option dictionary to suit Egor implementation
-        cstr_tol = [1e-4] * self.n_cstr if self.n_cstr else []
-        optim_settings = {
-            "cstr_tol": cstr_tol,
-        }
+        optim_settings = {}
         n_iter = self.opt_settings["maxiter"]
 
         # Filter out options requiring an object and ignore run options
@@ -142,7 +139,7 @@ class EgoboxEgorDriver(Driver):
             gp_config=GpConfig(**gp_config_args),
             qei_config=QEiConfig(**qei_config_args),
             trego=TregoConfig(**trego_config_args),
-            n_cstr=self.n_cstr,
+            cstr_specs=self.cstr_specs,
             **optim_settings,
         )
 
@@ -215,37 +212,41 @@ class EgoboxEgorDriver(Driver):
                 variables += [egx.XSpec(vartype, [meta_low, meta_high])]
         return variables
 
-    def _initialize_cons(self, eq_tol=None, ieq_tol=None):
-        """Format OpenMDAO constraints to suit EGOR implementation
+    def _initialize_cons(self):
+        """Format OpenMDAO constraints to suit EGOR implementation"""
+        cstr_specs = []
+        for name, meta in self._cons.items():
+            if meta["indices"] is not None:
+                meta["size"] = size = meta["indices"].indexed_src_size
+            else:
+                size = meta["global_size"] if meta["distributed"] else meta["size"]
+            upper = meta["upper"]
+            lower = meta["lower"]
+            equals = meta["equals"]
 
-        Parameters
-        ----------
-        eq_tol: dict
-            Dictionary to define specific tolerance for eq constraints
-            {'[groupName]': [tol]} Default tol = 1e-5
-        """
-        con_meta = self._cons
-
-        self.ieq_cons = {
-            name: con for name, con in con_meta.items() if not con["equals"]
-        }
-
-        # Inequality constraints
-        n_cstr = 0
-        for name in self.ieq_cons.keys():
-            meta = con_meta[name]
-            size = meta["size"]
-            # Bounds - double sided is supported
             lower = to_list(meta["lower"], size)
             upper = to_list(meta["upper"], size)
             for k in range(size):
-                if (lower[k] is None or lower[k] < -1e29) and upper[k] == 0.0:
-                    n_cstr += 1
+                if equals:
+                    cstr = egx.CstrSpec.eq(equals)
                 else:
-                    raise ValueError(
-                        f"Constraint {lower[k]} < g(x) < {upper[k]} not handled by Egor driver"
-                    )
-        return n_cstr
+                    if (
+                        lower[k] is not None
+                        and lower[k] > -1e29
+                        and upper[k] is not None
+                        and upper[k] < 1e29
+                    ):
+                        cstr = egx.CstrSpec.btw(lower[k], upper[k])
+                    elif lower[k] is not None and lower[k] > -1e29:
+                        cstr = egx.CstrSpec.geq(lower[k])
+                    elif upper[k] is not None and upper[k] < 1e29:
+                        cstr = egx.CstrSpec.leq(upper[k])
+                    else:
+                        raise ValueError(
+                            f"Constraint {name} has no valid bounds. Lower: {lower[k]}, Upper: {upper[k]}"
+                        )
+                cstr_specs += [cstr]
+        return cstr_specs
 
     def _objfunc(self, points):
         """
@@ -265,7 +266,7 @@ class EgoboxEgorDriver(Driver):
             0 for successful function evaluation
             1 for unsuccessful function evaluation
         """
-        res = np.zeros((points.shape[0], 1 + self.n_cstr))
+        res = np.zeros((points.shape[0], 1 + len(self.cstr_specs)))
         model = self._problem().model
 
         for k, point in enumerate(points):
