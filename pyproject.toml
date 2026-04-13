@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openmdao_extensions"
-version = "1.6.1"
+version = "1.6.2"
 description = "Additional solvers and drivers for OpenMDAO framework"
 readme = "README.md"
 license = "Apache-2.0"

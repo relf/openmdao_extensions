@@ -2,6 +2,7 @@ import numpy as np
 import traceback
 import importlib.metadata
 
+from openmdao.core.constants import INF_BOUND
 from openmdao.core.driver import Driver, RecordingDebugging
 from openmdao.core.analysis_error import AnalysisError
 from packaging.version import Version
@@ -72,6 +73,7 @@ class EgoboxEgorDriver(Driver):
         self.comm = None
 
     def run(self):
+        """Run the optimization driver."""
         model = self._problem().model
 
         self.iter_count = 0
@@ -179,6 +181,7 @@ class EgoboxEgorDriver(Driver):
         return True
 
     def _initialize_vars(self, model):
+        """Format OpenMDAO design variables to suit EGOR implementation."""
         dvs_int = {}
         for name, meta in self._designvars.items():
             infos = model.get_io_metadata(includes=name)
@@ -213,7 +216,7 @@ class EgoboxEgorDriver(Driver):
         return variables
 
     def _initialize_cons(self):
-        """Format OpenMDAO constraints to suit EGOR implementation"""
+        """Format OpenMDAO constraints to suit EGOR implementation."""
         cstr_specs = []
         for name, meta in self._cons.items():
             if meta["indices"] is not None:
@@ -227,25 +230,26 @@ class EgoboxEgorDriver(Driver):
             lower = to_list(meta["lower"], size)
             upper = to_list(meta["upper"], size)
             for k in range(size):
-                if equals:
+                if equals is not None:
                     cstr = egx.CstrSpec.eq(equals)
                 else:
                     if (
                         lower[k] is not None
-                        and lower[k] > -1e29
+                        and lower[k] > -INF_BOUND
                         and upper[k] is not None
-                        and upper[k] < 1e29
+                        and upper[k] < INF_BOUND
                     ):
                         cstr = egx.CstrSpec.btw(lower[k], upper[k])
-                    elif lower[k] is not None and lower[k] > -1e29:
+                    elif lower[k] is not None and lower[k] > -INF_BOUND:
                         cstr = egx.CstrSpec.geq(lower[k])
-                    elif upper[k] is not None and upper[k] < 1e29:
+                    elif upper[k] is not None and upper[k] < INF_BOUND:
                         cstr = egx.CstrSpec.leq(upper[k])
                     else:
                         raise ValueError(
                             f"Constraint {name} has no valid bounds. Lower: {lower[k]}, Upper: {upper[k]}"
                         )
                 cstr_specs += [cstr]
+
         return cstr_specs
 
     def _objfunc(self, points):
