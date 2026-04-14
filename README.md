@@ -6,8 +6,8 @@
 
 Set of specialized classes to handle specific methods using OpenMDAO framework.
 
-* `EgoboxEgorDriver` : an OpenMDAO driver for Egor optimizer from [Egobox](https://github.com/relf/egobox#egobox) library
-* `EgoboxDOEDriver` : an OpenMDAO driver for Mixint LHS DoE from [Egobox](https://github.com/relf/egobox#egobox) library
+* `EgoboxEgorDriver` : an OpenMDAO driver for Egor optimizer from [EGObox](https://github.com/relf/egobox#egobox) library
+* `EgoboxDOEDriver` : an OpenMDAO driver for Mixint LHS DoE from [EGObox](https://github.com/relf/egobox#egobox) library
 * `OneraSegoDriver` : an OpenMDAO driver for Onera Super EGO optimizers
 * `SmtDOEDriver` : an OpenMDAO driver for sampling methods from surrogate [SMT](https://smt.readthedocs.io/en/latest/) library
 * `SalibDOEDriver` : an OpenMDAO driver for Morris or Saltelli DoE from sensitive analysis [SALib](https://salib.readthedocs.io/en/latest/) library
